@@ -4,23 +4,30 @@ import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Observable;
 import java.util.ResourceBundle;
 
 import javafx.beans.binding.Binding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Slider;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.MediaPlayer.Status;
 import javafx.scene.media.MediaView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
@@ -52,13 +59,17 @@ public class Controller implements Initializable{
     private Button slowButton;
 
     @FXML
-    private Slider statusBar;
+    private Slider statusSlider;
 
     @FXML
     private Slider volumeSlider;
+
     private String filePath;
+    
     private File file;
+    
     private Media media;
+    
     private MediaPlayer player;
 
 	@FXML StackPane stackPane;
@@ -66,9 +77,16 @@ public class Controller implements Initializable{
 	@FXML BorderPane borderPane;
 
 	@FXML Button screenRationButton;
+	
 	ArrayList<File> mediaList;
+	
     private double rate=1;
+    
     int currentMedia=0;
+    
+    double unmutedVolume;
+
+	@FXML Button muteButton;
     
     @Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
@@ -83,16 +101,37 @@ public class Controller implements Initializable{
     
     private void Binding() {
     	mediaView.setManaged(false);
-    mediaView.fitWidthProperty().bind(stackPane.widthProperty());
-    mediaView.fitHeightProperty().bind(stackPane.heightProperty());
-    
-    mediaView.layoutBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
+    	mediaView.fitWidthProperty().bind(stackPane.widthProperty());
+    	mediaView.fitHeightProperty().bind(stackPane.heightProperty());
+    	
+    	mediaView.layoutBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
         mediaView.setTranslateX((stackPane.getWidth() - newBounds.getWidth()) / 2);
         mediaView.setTranslateY((stackPane.getHeight() - newBounds.getHeight()) / 2);
     });
      
     
-   }
+    volumeSlider.valueProperty().addListener((observable,oldValue,newValue)->{
+    		player.setVolume(volumeSlider.getValue()/100);
+    				});
+    
+   
+    
+    
+    player.currentTimeProperty().addListener(new ChangeListener<Duration>() {
+
+		@Override
+		public void changed(ObservableValue<? extends Duration> arg0, Duration oldValue, Duration newValue) {
+			statusSlider.setValue(newValue.toSeconds());
+			
+		}
+    	
+    }
+
+		);
+    
+   
+    																				
+    				}
 
 
 
@@ -105,18 +144,19 @@ public class Controller implements Initializable{
     	FileChooser.ExtensionFilter filter4 = new FileChooser.ExtensionFilter("select (*.mkv)", "*.mkv");   
     	chooser.getExtensionFilters().add(filter1);    chooser.getExtensionFilters().add(filter2);   
     	chooser.getExtensionFilters().add(filter3);    chooser.getExtensionFilters().add(filter4);     
-    	file=chooser.showOpenDialog(null);  
+    	file=chooser.showOpenDialog(null); 
+    	
     	File directory= new File( file.getParent());
     	
     	File[] filesList=directory.listFiles();
     	
     	for(File f:filesList) {
     		mediaList.add(f);
-    		System.out.println(f.getAbsolutePath());
     	}
     	
     	filePath=file.toURI().toString(); 
     	currentMedia=mediaList.indexOf(file);
+    	player.pause();
     	setUpMediaView();
     	
     }
@@ -130,7 +170,11 @@ public class Controller implements Initializable{
     @FXML
     void next(ActionEvent event) {
     	currentMedia++;
-    	file=mediaList.get(currentMedia);
+    	try {
+    		file=mediaList.get(currentMedia);
+		} catch (Exception e) {
+			System.out.println("no more medias to play");
+		}
     	setUpMediaView();
     	
     }
@@ -151,7 +195,11 @@ public class Controller implements Initializable{
     @FXML
     void previous(ActionEvent event) {
     	currentMedia--;
-    	file=mediaList.get(currentMedia);
+    	try {
+    		file=mediaList.get(currentMedia);
+		} catch (Exception e) {
+			System.out.println("no more medias to play");
+		}
     	setUpMediaView();
     }
 
@@ -175,13 +223,15 @@ public class Controller implements Initializable{
     	media=new Media(file.toURI().toString());
     	Main.getCurrentStage().setTitle(file.getName());
     	player = new MediaPlayer(media);
+    	statusSlider.setMax(player.getTotalDuration().toSeconds());
+    	statusSlider.setValue(0);
     	mediaView.setMediaPlayer(player);
     	player.play();
     }
 
+    
 
-
-	@FXML public void changeRatio() {
+		@FXML public void changeRatio() {
 		 
 		 if(mediaView.isPreserveRatio()) {
 			 mediaView.setPreserveRatio(false);//to stretch and fill the screen
@@ -190,6 +240,38 @@ public class Controller implements Initializable{
 		 }
 		
 	}
+
+		@FXML public void seekDuration(MouseEvent event) {
+		player.seek(Duration.seconds(statusSlider.getValue()));
+		
+	}
+
+		@FXML public void mute() {
+		if(player.getVolume()!=0) {
+		unmutedVolume=player.getVolume();
+		player.setVolume(0);
+		muteButton.setText("unmute");
+		}else {
+			player.setVolume(unmutedVolume);
+			muteButton.setText("mute");
+		}
+		
+	}
 	
+	 	@FXML public void OnDragOverMedia(DragEvent event) {
+			if(event.getDragboard().hasFiles()) {
+				event.acceptTransferModes(TransferMode.ANY);
+			}
+		}
+	    
+	    @FXML  public void OnDragDropped(DragEvent event) {
+
+	    		List<File> files= event.getDragboard().getFiles();
+				file=files.get(0);
+				setUpMediaView();
+	    		
+	    		
+	    
+	    }
 
 }
