@@ -29,7 +29,7 @@ public class Main extends Application {
 			
 			primaryStage.setMinHeight(500);
 			primaryStage.setMinWidth(800);
-			primaryStage.setTitle("L Player");
+			primaryStage.setTitle("My Player");
 			primaryStage.setScene(scene);
 			primaryStage.show();
 		} catch(Exception e) {
