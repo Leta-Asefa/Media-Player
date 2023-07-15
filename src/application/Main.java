@@ -1,9 +1,12 @@
 package application;
 	
 import javafx.application.Application;
+import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 
 
@@ -17,11 +20,15 @@ public class Main extends Application {
 		try {
 			currentStage=primaryStage;
 			BorderPane root =FXMLLoader.load(getClass().getResource("design.fxml"));
-			Scene scene = new Scene(root,600,400);
+			Scene scene = new Scene(root,800,500);
 			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 			
-			primaryStage.setMinHeight(400);
-			primaryStage.setMinWidth(600);
+			Image icon=new Image (getClass().getResource("logo.PNG").toURI().toString());
+			primaryStage.getIcons().add(icon);
+
+			
+			primaryStage.setMinHeight(500);
+			primaryStage.setMinWidth(800);
 			primaryStage.setTitle("L Player");
 			primaryStage.setScene(scene);
 			primaryStage.show();
